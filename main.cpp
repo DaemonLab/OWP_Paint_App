@@ -7,7 +7,9 @@
 #include <tchar.h>
 #include <windows.h>
 
-/*  Declare Windows procedure  */
+#include "utilities.h"      // Include our utility header
+
+/*  Declare procedures  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 
 /*  Make the class name into a global variable  */
@@ -82,6 +84,32 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
 {
     switch (message)                  /* handle the messages */
     {
+        case WM_CREATE:
+            addMenuBar (hwnd);           /* Add menubar to our window when it is created */
+            addToolbar (hwnd);           /* Add toolbar to our window when it is created */
+            break;
+        case WM_COMMAND:               /* Handle all the commands */
+            switch(LOWORD(wParam))       /* switch to ID of the menu that sent the command */
+            {
+                case IDM_FILE_NEW:
+                    break;
+                case IDM_FILE_OPEN:
+                    break;
+                case IDM_FILE_SAVE:
+                    break;
+                case IDM_FILE_QUIT:
+                    /* Send a CLOSE signal to the window so that it may clear up everything and exit properly */
+                    SendMessage(hwnd, WM_CLOSE, 0, 0);
+                    break;
+                case IDM_HELP_ABOUT:
+                    MessageBox(hwnd,          // The window over which messagebox is show
+                               _T("Made under One Week Projects! \n"
+                                  "Visit https://github.com/DaemonLab for more info"),// Text in the messagebox
+                               _T("About"),       // Title of the message box
+                               MB_OK | MB_ICONINFORMATION);   // The buttons and icon in messagebox
+                    break;
+            }
+            break;
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
             break;

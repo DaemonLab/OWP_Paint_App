@@ -4,3 +4,7 @@ obj/*
 
 # temp files
 *~
+
+# codeblocks files
+*.depend
+*.layout
