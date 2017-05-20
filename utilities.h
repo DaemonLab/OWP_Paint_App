@@ -12,6 +12,6 @@
 
 // Function to add to windows
 void addMenuBar (HWND parentWindow);
-void addToolbar (HWND parentWindow);
+void addToolBar (HWND parentWindow);
 
 #endif // __MY_UTILITIES_H__

@@ -8,6 +8,7 @@
 #include <windows.h>
 
 #include "utilities.h"      // Include our utility header
+#include "painter.h"        // Include our painter module
 
 /*  Declare procedures  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
@@ -77,16 +78,51 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     return messages.wParam;
 }
 
+// Our global variables
+Painter* global_painter = NULL;
+bool mouse_drag = false;
 
 /*  This function is called by the Windows function DispatchMessage()  */
-
 LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)                  /* handle the messages */
     {
         case WM_CREATE:
             addMenuBar (hwnd);           /* Add menubar to our window when it is created */
-            addToolbar (hwnd);           /* Add toolbar to our window when it is created */
+            addToolBar (hwnd);           /* Add toolbar to our window when it is created */
+            global_painter = new Painter(hwnd);
+            break;
+        case WM_PAINT:
+            // All the drawing on actual window must be done in WM_PAINT event only
+            global_painter->draw(hwnd);
+            break;
+        case WM_LBUTTONDOWN:
+            {
+                mouse_drag = true;      // Set it to true so that later mouse move events are counted as drag
+                // Get the mouse location from lParam
+                int mousx = LOWORD(lParam);
+                int mousy = HIWORD(lParam);
+                // Add the point on our buffer canvas
+                global_painter->addPoint(mousx, mousy);
+                // Invalidate the window and force redraw so that all the changes are visible instantly
+                // This will trigger WM_PAINT event
+                InvalidateRect(hwnd, NULL, FALSE);
+                UpdateWindow(hwnd);
+                break;
+            }
+        case WM_LBUTTONUP:
+            mouse_drag = false;     // Mouse drag has stopped
+            break;
+        case WM_MOUSEMOVE:
+            if (mouse_drag)
+            {
+                // Add more points if mouse is being dragged
+                int mousx = LOWORD(lParam);
+                int mousy = HIWORD(lParam);
+                global_painter->addPoint(mousx, mousy);
+                InvalidateRect(hwnd, NULL, FALSE);
+                UpdateWindow(hwnd);
+            }
             break;
         case WM_COMMAND:               /* Handle all the commands */
             switch(LOWORD(wParam))       /* switch to ID of the menu that sent the command */
@@ -111,6 +147,9 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             }
             break;
         case WM_DESTROY:
+            // Clear the memory for the allocated pointer
+            if (global_painter)
+                delete global_painter;
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
             break;
         default:                      /* for messages that we don't deal with */
