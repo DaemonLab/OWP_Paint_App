@@ -103,7 +103,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 int mousx = LOWORD(lParam);
                 int mousy = HIWORD(lParam);
                 // Add the point on our buffer canvas
-                global_painter->addPoint(mousx, mousy);
+                global_painter->startPaint(mousx, mousy);
                 // Invalidate the window and force redraw so that all the changes are visible instantly
                 // This will trigger WM_PAINT event
                 InvalidateRect(hwnd, NULL, FALSE);
@@ -111,7 +111,11 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 break;
             }
         case WM_LBUTTONUP:
-            mouse_drag = false;     // Mouse drag has stopped
+            if (mouse_drag)
+            {
+                global_painter->endPaint();
+                mouse_drag = false;     // Mouse drag has stopped
+            }
             break;
         case WM_MOUSEMOVE:
             if (mouse_drag)
@@ -119,10 +123,13 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 // Add more points if mouse is being dragged
                 int mousx = LOWORD(lParam);
                 int mousy = HIWORD(lParam);
-                global_painter->addPoint(mousx, mousy);
+                global_painter->continuePaint(mousx, mousy);
                 InvalidateRect(hwnd, NULL, FALSE);
                 UpdateWindow(hwnd);
             }
+            break;
+        case WM_KEYDOWN:
+            global_painter->handleKeyPress(wParam);
             break;
         case WM_COMMAND:               /* Handle all the commands */
             switch(LOWORD(wParam))       /* switch to ID of the menu that sent the command */
@@ -142,6 +149,19 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                                _T("Made under One Week Projects! \n"
                                   "Visit https://github.com/DaemonLab for more info"),// Text in the messagebox
                                _T("About"),       // Title of the message box
+                               MB_OK | MB_ICONINFORMATION);   // The buttons and icon in messagebox
+                    break;
+                case IDM_HELP_CTRLS:
+                    MessageBox(hwnd,          // The window over which messagebox is show
+                               _T("Use the following buttons to change the drawing tools: \n"
+                                  "1 -- pencil \n"
+                                  "2 -- rectangle \n"
+                                  "3 -- ellipse \n"
+                                  "4 -- filled rectangle \n"
+                                  "5 -- filled ellipse \n"
+                                  "6 -- change pen color (coming soon) \n"
+                                  "7 -- change brush color (coming soon)"),// Text in the messagebox
+                               _T("Controls"),       // Title of the message box
                                MB_OK | MB_ICONINFORMATION);   // The buttons and icon in messagebox
                     break;
             }

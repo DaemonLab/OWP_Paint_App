@@ -24,6 +24,7 @@ void addMenuBar (HWND parentWindow)
     hHelpMenu = CreateMenu();
     // Use the API to add menu items with some text, some ID to the hHelpMenu handle
     AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_ABOUT, L"&About");
+    AppendMenuW(hHelpMenu, MF_STRING, IDM_HELP_CTRLS, L"&Controls");
     // Append the Help menu to menubar which will POPUP
     AppendMenuW(hMenubar, MF_POPUP, (UINT_PTR) hHelpMenu, L"&Help");
 

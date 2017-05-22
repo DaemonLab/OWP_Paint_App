@@ -9,6 +9,7 @@
 #define IDM_FILE_SAVE  1003
 #define IDM_FILE_QUIT  1004
 #define IDM_HELP_ABOUT 2001
+#define IDM_HELP_CTRLS 2002
 
 // Function to add to windows
 void addMenuBar (HWND parentWindow);
