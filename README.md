@@ -43,5 +43,10 @@ We will also use the concept of virutal functions and make a purely virtual base
 Most of the code is straightforward and some comments are left to explain the code. The brush is used to fill objects and hence it needs to be set to a `NULL_BRUSH` if we don't want the shape to be filled. Also, since dragging the rectangle and ellipse must remove the previously drawn shape (before mouse button is left) hence we will store the state of the hdc when `startPaint` of such shapes is called and when we have to draw a new shape, we will first paint (`BitBlt`) the start state and paint the shape upon it. When the drawing is to stop, we simply clear the memory of the additional copy.  
 Out software is now looking like a paint tool. In the next step we will try to add the save/open functions and maybe the color changing options for brush and pen colors. Till then, happy coding! :)  
 
-### Step 5
+### Step 5 -- Using file and color picker (Standard) dialog boxes
+In this step we will use the standard dialog boxes of windows, the file selecter and color picker dialogs. We put 3 functions in out utilites header which will do this. The code is explained in comments. We also make a function to actually write the image data into a file since the dialog boxes only return a file name. The BMP file format is standard and we follow its rules to write it to a file. The file reading part in `IDM_FILE_OPEN` is easier as the windows API already has a function named `LoadImage` that can load the image into a `HBITMAP` object for us.  
+In Painter we select `DC_PEN` and `DC_BRUSH` in hdcMem now because those pens and brushes allow us to set their color directly using `SetDCPenColor` and `SetDCBrushColor` functions. In the `handleKeyPress` function we do the same by using the color picker dialog from utility header. We define 2 more functions for loading image and saving image which just BitBlt the HBITMAp onto/from hdcMem. We also define a destructor to clean up memory.  
+Now our paint app is nearly complete. In the next and final step we will do some cleanup and add the missing functionalities. Hopefully the results of this step would motivate the readers to learn the API and develop their own projects. Happy Coding! :)  
+
+### Step 6
 Coming soon...  

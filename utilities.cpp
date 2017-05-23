@@ -1,6 +1,7 @@
 #include "utilities.h"
 
 #include <commctrl.h>
+#include <cstdio>
 
 void addMenuBar (HWND parentWindow)
 {
@@ -72,4 +73,116 @@ void addToolBar (HWND parentWindow)
     // Resize the toolbar, and then show it.
     SendMessage(hWndToolbar, TB_AUTOSIZE, 0, 0);
     ShowWindow(hWndToolbar,  TRUE);
+}
+
+// One function for both "Open" and "Save" commands:
+BOOL runFileDialog (HWND hwnd, CHAR* pstrResultPath, bool saveDialog) {
+    OPENFILENAME ofn = {0};
+    BOOL bRetCode;
+
+    ofn.lStructSize = sizeof (ofn);     // Its own size
+    ofn.hwndOwner = hwnd;       // The window over which this dialog will be shown
+    ofn.Flags = OFN_PATHMUSTEXIST;      // The selected folder path must exist, obviously!
+    ofn.lpstrFile = pstrResultPath;     // Variable pointer to store the resultant path
+    // Filters shown in the dialog bos
+    ofn.lpstrFilter = "Bitmap Files (*.bmp)\0*.bmp\0";
+    ofn.lpstrDefExt = "bmp";
+    // maximum path size is given by MAX_PATH constant
+    ofn.nMaxFile = MAX_PATH;
+    pstrResultPath [0] = '\0';  // Initialise by NULL
+
+    if (saveDialog)
+    {
+        // ask confirmation for overwrite if file exists while saving
+        ofn.Flags |= OFN_OVERWRITEPROMPT;
+        bRetCode = GetSaveFileName (&ofn);
+    }
+    else
+    {
+        // make sure the specified file name must exist when trying to open
+        ofn.Flags |= OFN_FILEMUSTEXIST;
+        bRetCode = GetOpenFileName (&ofn);
+    }
+    return bRetCode;
+}
+
+bool runOpenFileDialog(HWND hwnd, CHAR* openFilePath)
+{
+    return runFileDialog(hwnd, openFilePath, false);
+}
+
+bool runSaveFileDialog(HWND hwnd, CHAR* saveFilePath)
+{
+    return runFileDialog(hwnd, saveFilePath, true);
+}
+
+bool runChooseColorDialog(HWND hwnd, COLORREF* colorChosen)
+{
+    CHOOSECOLOR cc; // common dialog box structure
+     // array of custom colors. this has to be static
+     // as it will not be lost between calls to this function
+     // since user can store custom colors
+    static COLORREF acrCustClr[16];
+    // Initialize CHOOSECOLOR
+    ZeroMemory(&cc, sizeof(CHOOSECOLOR));
+    cc.lStructSize = sizeof(CHOOSECOLOR);
+    cc.hwndOwner = hwnd;        // Window over which it will be shown
+    cc.lpCustColors = (LPDWORD) acrCustClr; // 16 custom colors
+    COLORREF clr;
+    cc.rgbResult = clr;     // Initial value
+    cc.Flags = CC_FULLOPEN | CC_RGBINIT;
+    bool retVal = ChooseColor(&cc);
+    *colorChosen = cc.rgbResult;    // Store the result in variable
+    return retVal;
+}
+
+void saveBitmapToFile(HBITMAP bitmap, CHAR* filePath, HWND hwnd)
+{
+    RECT client;
+    GetWindowRect(hwnd, &client);
+    UINT uiBytesPerRow = 3 * client.right; // RGB takes 24 bits
+    UINT uiRemainderForPadding;
+
+    // Make the bytes per row to be multiple of DWORD size
+    if ((uiRemainderForPadding = uiBytesPerRow % sizeof (DWORD)) > 0)
+        uiBytesPerRow += (sizeof (DWORD) - uiRemainderForPadding);
+
+    // Calculate and allocated total memory
+    UINT uiBytesPerAllRows = uiBytesPerRow * client.bottom;
+    PBYTE pDataBits;
+    if ((pDataBits = new BYTE [uiBytesPerAllRows]) != NULL)
+    {
+        BITMAPINFOHEADER bmi = {0};
+        BITMAPFILEHEADER bmf = {0};
+        HDC hDC = GetDC (hwnd);
+
+        // Prepare to get the data out of HBITMAP:
+        bmi.biSize = sizeof (bmi);
+        bmi.biPlanes = 1;
+        bmi.biBitCount = 24;
+        bmi.biHeight = client.bottom;
+        bmi.biWidth = client.right;
+
+        // Get it:
+        GetDIBits (hDC, bitmap, 0, client.bottom,
+            pDataBits, (BITMAPINFO*) &bmi, DIB_RGB_COLORS);
+
+        ReleaseDC (hwnd, hDC);  //release the DC got via GetDC
+
+        // Fill the file header:
+        bmf.bfOffBits = sizeof (bmf) + sizeof (bmi);
+        bmf.bfSize = bmf.bfOffBits + uiBytesPerAllRows;
+        bmf.bfType = 0x4D42;
+
+        // Write the actual file as per BMP file format
+        FILE* pFile;
+        if ((pFile = fopen (filePath, "wb")) != NULL)
+        {
+            fwrite (&bmf, sizeof (bmf), 1, pFile);
+            fwrite (&bmi, sizeof (bmi), 1, pFile);
+            fwrite (pDataBits, sizeof (BYTE), uiBytesPerAllRows, pFile);
+            fclose (pFile);
+        }
+        delete [] pDataBits;
+    }
 }

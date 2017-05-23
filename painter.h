@@ -29,13 +29,19 @@ private:
     PaintTool* currentTool; // Current drawing tool
 public:
     Painter(HWND hwnd);
+    ~Painter();
 
     void startPaint(int x, int y);
     void continuePaint(int x, int y);
     void endPaint();
 
-    void handleKeyPress(WPARAM key);
+    void handleKeyPress(HWND hwnd, WPARAM key);
     void draw(HWND hwnd);
+
+    // Display the HBITMAP on hdcMem
+    void load_image(HBITMAP bitmap);
+    // copy contents of hdcMem to the BITMAP
+    void copyScreenToImage(HDC hdcTarget);
 };
 
 /* All the Paint Tools */

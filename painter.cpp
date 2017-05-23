@@ -1,5 +1,7 @@
 #include "painter.h"
 
+#include "utilities.h"
+
 Painter::Painter(HWND hwnd)
 {
     // Get Size of the window. Width of the window will be rc.right-rc.left
@@ -13,13 +15,18 @@ Painter::Painter(HWND hwnd)
     // A bitmap is where actual drawing takes place. A DC is a paper holder while bitmap is
     // the paper on which drawing is done. We create a bitmap which resembles the paper on screen
     bitmapMem = CreateCompatibleBitmap(hdc, rc.right - rc.left, rc.bottom - rc.top);
-
+    // Release the DC got via GetDC
+    ReleaseDC(hwnd, hdc);
     // Keep the paper in the paper holder
     SelectObject(hdcMem, bitmapMem);
     // Select the brush and pen that will be kept on the holder
-    // These will be used for drawing shapes. We are using predefined bursh and pen.
-    SelectObject(hdcMem, GetStockObject(BLACK_BRUSH));
-    SelectObject(hdcMem, GetStockObject(WHITE_PEN));
+    // These will be used for drawing shapes.
+    // We are using DC_PEN and DC_BRUSH so we can change their color when required.
+    SelectObject(hdcMem, GetStockObject(DC_PEN));
+    SelectObject(hdcMem, GetStockObject(DC_BRUSH));
+
+    SetDCBrushColor(hdcMem, RGB(0, 0, 0));
+    SetDCPenColor(hdcMem, RGB(255, 255, 255));
 
     // Create a Pencil tool as default tool
     currentTool = new PencilTool();
@@ -40,7 +47,7 @@ void Painter::endPaint()
     currentTool->endPaint();
 }
 
-void Painter::handleKeyPress(WPARAM key)
+void Painter::handleKeyPress(HWND hwnd, WPARAM key)
 {
     switch(key)
     {
@@ -63,8 +70,20 @@ void Painter::handleKeyPress(WPARAM key)
     case '5':   // Filled Ellipse
         delete currentTool;
         currentTool = new EllipseTool(true);
+        break;
     case '6':   // Change Pen Color
+        COLORREF penClr;
+        if (runChooseColorDialog(hwnd, &penClr))
+        {
+            SetDCPenColor(hdcMem, penClr);
+        }
+        break;
     case '7':   // Change Brush Color
+        COLORREF brushClr;
+        if (runChooseColorDialog(hwnd, &brushClr))
+        {
+            SetDCBrushColor(hdcMem, brushClr);
+        }
     default:
         break;
     }
@@ -72,8 +91,6 @@ void Painter::handleKeyPress(WPARAM key)
 
 void Painter::draw(HWND hwnd)
 {
-    RECT rc;
-    GetWindowRect(hwnd, &rc);   // Get the window size
     HDC     hdc;
     PAINTSTRUCT ps;         // Required by BeginPaint
     // We must do all the painting on actual device context only
@@ -86,14 +103,38 @@ void Painter::draw(HWND hwnd)
     EndPaint(hwnd, &ps);    // Signal end of painting
 }
 
+Painter::~Painter()
+{
+    // Clear memory on destruction
+    DeleteDC(hdcMem);
+    DeleteObject(bitmapMem);
+
+    delete currentTool;
+}
+
+void Painter::load_image(HBITMAP bitmap)
+{
+    // Create a new DC and BitBlt the image onto our hdcMem
+    HDC hdcExtra = CreateCompatibleDC(hdcMem);
+    SelectObject(hdcExtra, bitmap);
+    BitBlt(hdcMem, 0, 0, rc.right - rc.left, rc.bottom - rc.top, hdcExtra, 0, 0, SRCCOPY);
+    DeleteDC(hdcExtra);
+}
+
+void Painter::copyScreenToImage(HDC hdcTarget)
+{
+    // Simply BitBlt the image onto the required target DC
+    BitBlt(hdcTarget, 0, 0, rc.right - rc.left, rc.bottom - rc.top, hdcMem, 0, 0, SRCCOPY);
+}
+
 void PencilTool::startPaint(int x, int y, HDC hdc, RECT rc)
 {
-    SetPixel(hdc, x, y, RGB(255, 255, 255));     // Set the pixel white
+    SetPixel(hdc, x, y, GetDCPenColor(hdc));     // Set the pixel with pen color
 }
 
 void PencilTool::continuePaint(int x, int y, HDC hdc, RECT rc)
 {
-    SetPixel(hdc, x, y, RGB(255, 255, 255));     // Set the pixel white
+    SetPixel(hdc, x, y, GetDCPenColor(hdc));     // Set the pixel with pen color
 }
 
 void PencilTool::endPaint()

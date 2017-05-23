@@ -129,7 +129,7 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             }
             break;
         case WM_KEYDOWN:
-            global_painter->handleKeyPress(wParam);
+            global_painter->handleKeyPress(hwnd, wParam);
             break;
         case WM_COMMAND:               /* Handle all the commands */
             switch(LOWORD(wParam))       /* switch to ID of the menu that sent the command */
@@ -137,8 +137,34 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case IDM_FILE_NEW:
                     break;
                 case IDM_FILE_OPEN:
+                    CHAR openFilePath[MAX_PATH];
+                    if (runOpenFileDialog(hwnd, openFilePath))
+                    {
+                        HBITMAP loaded_image = (HBITMAP) LoadImage (NULL, openFilePath, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+                        global_painter->load_image(loaded_image);
+                        DeleteObject(loaded_image);
+                        InvalidateRect(hwnd, NULL, FALSE);
+                        UpdateWindow(hwnd);
+                    }
                     break;
                 case IDM_FILE_SAVE:
+                    CHAR saveFilePath[MAX_PATH];
+                    if (runSaveFileDialog(hwnd, saveFilePath))
+                    {
+                        // Create a copy DC, make the painter paint the image on the copy
+                        // then save the copy bitmap. Finally release the memory
+                        HDC hdc = GetDC(hwnd);
+                        RECT rc;
+                        GetWindowRect(hwnd, &rc);
+                        HDC hdcTarget = CreateCompatibleDC(hdc);
+                        HBITMAP bitmapTarget = CreateCompatibleBitmap(hdc, rc.right - rc.left, rc.bottom - rc.top);
+                        ReleaseDC(hwnd, hdc);
+                        SelectObject(hdcTarget, bitmapTarget);
+                        global_painter->copyScreenToImage(hdcTarget);
+                        saveBitmapToFile(bitmapTarget, saveFilePath, hwnd);
+                        DeleteDC(hdcTarget);
+                        DeleteObject(bitmapTarget);
+                    }
                     break;
                 case IDM_FILE_QUIT:
                     /* Send a CLOSE signal to the window so that it may clear up everything and exit properly */
@@ -159,8 +185,8 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                                   "3 -- ellipse \n"
                                   "4 -- filled rectangle \n"
                                   "5 -- filled ellipse \n"
-                                  "6 -- change pen color (coming soon) \n"
-                                  "7 -- change brush color (coming soon)"),// Text in the messagebox
+                                  "6 -- change pen color \n"
+                                  "7 -- change brush color "),// Text in the messagebox
                                _T("Controls"),       // Title of the message box
                                MB_OK | MB_ICONINFORMATION);   // The buttons and icon in messagebox
                     break;

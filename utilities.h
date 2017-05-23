@@ -15,4 +15,13 @@
 void addMenuBar (HWND parentWindow);
 void addToolBar (HWND parentWindow);
 
+// Store the full file path in the char* or COLORREF variable
+// false is returned if user cancelled the dialog
+bool runOpenFileDialog(HWND hwnd, CHAR* openFilePath);
+bool runSaveFileDialog(HWND hwnd, CHAR* saveFilePath);
+bool runChooseColorDialog(HWND hwnd, COLORREF* colorChosen);
+
+// A utility to save the HBITMAP to a .bmp file
+void saveBitmapToFile(HBITMAP bitmap, CHAR* filePath, HWND hwnd);
+
 #endif // __MY_UTILITIES_H__
