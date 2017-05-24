@@ -1,6 +1,7 @@
 #include "utilities.h"
 
 #include <commctrl.h>
+#include <windows.h>
 #include <cstdio>
 
 void addMenuBar (HWND parentWindow)
@@ -13,10 +14,12 @@ void addMenuBar (HWND parentWindow)
     hFileMenu = CreateMenu();           // Create an object of the menu to hold all the options for File menu
 
     // Use the API to add menu items with some text, some ID to the hFileMenu handle
-    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_NEW, L"&New");
-    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_OPEN, L"&Open");
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_NEW,     L"&New  \tCtrl+N");
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_OPEN,    L"&Open \tCtrl+O");
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_SAVE,    L"&Save \tCtrl+S");
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_SAVE_AS, L"&Save As");
     AppendMenuW(hFileMenu, MF_SEPARATOR, 0, NULL);              // A horizontal separator
-    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_QUIT, L"&Quit");
+    AppendMenuW(hFileMenu, MF_STRING, IDM_FILE_QUIT,    L"&Quit \tCtrl+Q");
 
     // Append the File menu to menubar which will POPUP
     AppendMenuW(hMenubar, MF_POPUP, (UINT_PTR) hFileMenu, L"&File");
@@ -185,4 +188,26 @@ void saveBitmapToFile(HBITMAP bitmap, CHAR* filePath, HWND hwnd)
         }
         delete [] pDataBits;
     }
+}
+
+HACCEL createShortcutsForMenus()
+{
+    // Create a table of what keypress will send what signal
+    ACCEL allAccelerators[4];
+    // FVIRTKEY implies that the keycode should be taken independently
+    // that is, pressing 'N' does nothing without pressing Ctrl too (FCONTROL)
+    allAccelerators[0].fVirt = FCONTROL | FVIRTKEY;      // Ctrl must be pressed
+    allAccelerators[0].key = 'N';             // N key with Ctrl
+    allAccelerators[0].cmd = IDM_FILE_NEW;    // Will send IDM_FILE_NEW
+    allAccelerators[1].fVirt = FCONTROL | FVIRTKEY;
+    allAccelerators[1].key = 'O';
+    allAccelerators[1].cmd = IDM_FILE_OPEN;
+    allAccelerators[2].fVirt = FCONTROL | FVIRTKEY;
+    allAccelerators[2].key = 'S';
+    allAccelerators[2].cmd = IDM_FILE_SAVE;
+    allAccelerators[3].fVirt = FCONTROL | FVIRTKEY;
+    allAccelerators[3].key = 'Q';
+    allAccelerators[3].cmd = IDM_FILE_QUIT;
+
+    return CreateAcceleratorTable(allAccelerators, 4);
 }

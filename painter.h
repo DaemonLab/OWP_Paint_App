@@ -27,6 +27,8 @@ private:
     HBITMAP bitmapMem;
 
     PaintTool* currentTool; // Current drawing tool
+    CHAR curFileName[MAX_PATH];
+    bool changed;
 public:
     Painter(HWND hwnd);
     ~Painter();
@@ -38,10 +40,18 @@ public:
     void handleKeyPress(HWND hwnd, WPARAM key);
     void draw(HWND hwnd);
 
+    void getCurFileName(CHAR* fileName);
+
     // Display the HBITMAP on hdcMem
     void load_image(HBITMAP bitmap);
     // copy contents of hdcMem to the BITMAP
-    void copyScreenToImage(HDC hdcTarget);
+    void copyScreenToImage(HDC hdcTarget, CHAR* fileName);
+    // ask the user to save changes if there are new changes
+    int askForSaveIfReq(HWND hwnd);
+    // Check if user has already saved this to a file
+    bool hasFileName();
+    // Clear the painting
+    void clearScreen();
 };
 
 /* All the Paint Tools */
@@ -49,6 +59,9 @@ public:
 // Pencil
 class PencilTool : public PaintTool
 {
+private:
+    int lastx;
+    int lasty;
 public:
     virtual void startPaint(int x, int y, HDC hdc, RECT rc);
     virtual void continuePaint(int x, int y, HDC hdc, RECT rc);

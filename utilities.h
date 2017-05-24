@@ -4,16 +4,19 @@
 #include <windows.h>
 
 // IDs for Menu items
-#define IDM_FILE_NEW   1001
-#define IDM_FILE_OPEN  1002
-#define IDM_FILE_SAVE  1003
-#define IDM_FILE_QUIT  1004
-#define IDM_HELP_ABOUT 2001
-#define IDM_HELP_CTRLS 2002
+#define IDM_FILE_NEW     1001
+#define IDM_FILE_OPEN    1002
+#define IDM_FILE_SAVE    1003
+#define IDM_FILE_SAVE_AS 1004
+#define IDM_FILE_QUIT    1005
+#define IDM_HELP_ABOUT   2001
+#define IDM_HELP_CTRLS   2002
 
 // Function to add to windows
 void addMenuBar (HWND parentWindow);
 void addToolBar (HWND parentWindow);
+// Creates shortcut table for Ctrl+ keys
+HACCEL createShortcutsForMenus();
 
 // Store the full file path in the char* or COLORREF variable
 // false is returned if user cancelled the dialog

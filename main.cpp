@@ -12,9 +12,11 @@
 
 /*  Declare procedures  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
+void savePainterToFile(HWND hwnd, CHAR* fileName);
 
 /*  Make the class name into a global variable  */
 TCHAR szClassName[ ] = _T("OWPApp");
+HACCEL hAccel;  // Accelerator Table
 
 int WINAPI WinMain (HINSTANCE hThisInstance,
                      HINSTANCE hPrevInstance,
@@ -65,13 +67,20 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
     /* Make the window visible on the screen */
     ShowWindow (hwnd, nCmdShow);
 
+    hAccel = createShortcutsForMenus();  // Create the accelerator table
+
     /* Run the message loop. It will run until GetMessage() returns 0 */
     while (GetMessage (&messages, NULL, 0, 0))
     {
-        /* Translate virtual-key messages into character messages */
-        TranslateMessage(&messages);
-        /* Send message to WindowProcedure */
-        DispatchMessage(&messages);
+        // Try to dispatch the message via accelerator table
+        // If the message is not for accelerators then dispatch normally
+        if (!TranslateAccelerator(hwnd, hAccel, &messages))
+        {
+            /* Translate virtual-key messages into character messages */
+            TranslateMessage(&messages);
+            /* Send message to WindowProcedure */
+            DispatchMessage(&messages);
+        }
     }
 
     /* The program return-value is 0 - The value that PostQuitMessage() gave */
@@ -135,8 +144,31 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             switch(LOWORD(wParam))       /* switch to ID of the menu that sent the command */
             {
                 case IDM_FILE_NEW:
+                    switch(global_painter->askForSaveIfReq(hwnd))
+                    {
+                    case IDYES:
+                        SendMessage(hwnd, WM_COMMAND, IDM_FILE_SAVE, 0);
+                        break;
+                    case IDNO:
+                        break;
+                    case IDCANCEL:
+                        return 0;       // User doesn't want new screen
+                    }
+                    global_painter->clearScreen();
+                    InvalidateRect(hwnd, NULL, FALSE);
+                    UpdateWindow(hwnd);
                     break;
                 case IDM_FILE_OPEN:
+                    switch(global_painter->askForSaveIfReq(hwnd))
+                    {
+                    case IDYES:
+                        SendMessage(hwnd, WM_COMMAND, IDM_FILE_SAVE, 0);
+                        break;
+                    case IDNO:
+                        break;
+                    case IDCANCEL:
+                        return 0;       // User doesn't want to open
+                    }
                     CHAR openFilePath[MAX_PATH];
                     if (runOpenFileDialog(hwnd, openFilePath))
                     {
@@ -148,23 +180,20 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     }
                     break;
                 case IDM_FILE_SAVE:
-                    CHAR saveFilePath[MAX_PATH];
-                    if (runSaveFileDialog(hwnd, saveFilePath))
+                    if (!global_painter->hasFileName()) // First Time Save
+                        SendMessage(hwnd, WM_COMMAND, IDM_FILE_SAVE_AS, 0);
+                    else
                     {
-                        // Create a copy DC, make the painter paint the image on the copy
-                        // then save the copy bitmap. Finally release the memory
-                        HDC hdc = GetDC(hwnd);
-                        RECT rc;
-                        GetWindowRect(hwnd, &rc);
-                        HDC hdcTarget = CreateCompatibleDC(hdc);
-                        HBITMAP bitmapTarget = CreateCompatibleBitmap(hdc, rc.right - rc.left, rc.bottom - rc.top);
-                        ReleaseDC(hwnd, hdc);
-                        SelectObject(hdcTarget, bitmapTarget);
-                        global_painter->copyScreenToImage(hdcTarget);
-                        saveBitmapToFile(bitmapTarget, saveFilePath, hwnd);
-                        DeleteDC(hdcTarget);
-                        DeleteObject(bitmapTarget);
+                        // Overwrite the existing file
+                        CHAR saveFilePath[MAX_PATH];
+                        global_painter->getCurFileName(saveFilePath);
+                        savePainterToFile(hwnd, saveFilePath);
                     }
+                    break;
+                case IDM_FILE_SAVE_AS:
+                    CHAR saveAsFilePath[MAX_PATH];
+                    if (runSaveFileDialog(hwnd, saveAsFilePath))
+                        savePainterToFile(hwnd, saveAsFilePath);
                     break;
                 case IDM_FILE_QUIT:
                     /* Send a CLOSE signal to the window so that it may clear up everything and exit properly */
@@ -192,7 +221,22 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     break;
             }
             break;
+        case WM_CLOSE:
+            switch(global_painter->askForSaveIfReq(hwnd))
+            {
+            case IDYES:
+                SendMessage(hwnd, WM_COMMAND, IDM_FILE_SAVE, 0);
+                break;
+            case IDNO:
+                break;
+            case IDCANCEL:
+                return 0;       // User doesn't want to exit
+            }
+            return DefWindowProc (hwnd, message, wParam, lParam);
+            break;
         case WM_DESTROY:
+            // Destroy the accelerator table
+            DestroyAcceleratorTable(hAccel);
             // Clear the memory for the allocated pointer
             if (global_painter)
                 delete global_painter;
@@ -203,4 +247,21 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
     }
 
     return 0;
+}
+
+void savePainterToFile(HWND hwnd, CHAR* fileName)
+{
+    // Create a copy DC, make the painter paint the image on the copy
+    // then save the copy bitmap. Finally release the memory
+    HDC hdc = GetDC(hwnd);
+    RECT rc;
+    GetWindowRect(hwnd, &rc);
+    HDC hdcTarget = CreateCompatibleDC(hdc);
+    HBITMAP bitmapTarget = CreateCompatibleBitmap(hdc, rc.right - rc.left, rc.bottom - rc.top);
+    ReleaseDC(hwnd, hdc);
+    SelectObject(hdcTarget, bitmapTarget);
+    global_painter->copyScreenToImage(hdcTarget, fileName);
+    saveBitmapToFile(bitmapTarget, fileName, hwnd);
+    DeleteDC(hdcTarget);
+    DeleteObject(bitmapTarget);
 }

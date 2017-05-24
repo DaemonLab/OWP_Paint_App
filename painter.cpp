@@ -1,5 +1,6 @@
 #include "painter.h"
 
+#include <tchar.h>
 #include "utilities.h"
 
 Painter::Painter(HWND hwnd)
@@ -19,31 +20,40 @@ Painter::Painter(HWND hwnd)
     ReleaseDC(hwnd, hdc);
     // Keep the paper in the paper holder
     SelectObject(hdcMem, bitmapMem);
+    // First Clear the screen white
+    SelectObject(hdcMem, GetStockObject(WHITE_BRUSH));
+    SelectObject(hdcMem, GetStockObject(WHITE_PEN));
+    Rectangle(hdcMem, 0, 0, rc.right, rc.bottom);
     // Select the brush and pen that will be kept on the holder
     // These will be used for drawing shapes.
     // We are using DC_PEN and DC_BRUSH so we can change their color when required.
     SelectObject(hdcMem, GetStockObject(DC_PEN));
     SelectObject(hdcMem, GetStockObject(DC_BRUSH));
 
-    SetDCBrushColor(hdcMem, RGB(0, 0, 0));
-    SetDCPenColor(hdcMem, RGB(255, 255, 255));
+    SetDCBrushColor(hdcMem, RGB(255, 255, 255));
+    SetDCPenColor(hdcMem, RGB(0, 0, 0));
 
-    // Create a Pencil tool as default tool
+    // Create a Pencil tool as default tool and set current fileName to null
     currentTool = new PencilTool();
+    curFileName[0] = '\0';
+    changed = false;        // No edits yet
 }
 
 void Painter::startPaint(int x, int y)
 {
+    changed = true;
     currentTool->startPaint(x, y, hdcMem, rc);
 }
 
 void Painter::continuePaint(int x, int y)
 {
+    changed = true;
     currentTool->continuePaint(x, y, hdcMem, rc);
 }
 
 void Painter::endPaint()
 {
+    changed = true;
     currentTool->endPaint();
 }
 
@@ -119,22 +129,61 @@ void Painter::load_image(HBITMAP bitmap)
     SelectObject(hdcExtra, bitmap);
     BitBlt(hdcMem, 0, 0, rc.right - rc.left, rc.bottom - rc.top, hdcExtra, 0, 0, SRCCOPY);
     DeleteDC(hdcExtra);
+    changed = false;    // New image
 }
 
-void Painter::copyScreenToImage(HDC hdcTarget)
+void Painter::copyScreenToImage(HDC hdcTarget, CHAR* fileName)
 {
     // Simply BitBlt the image onto the required target DC
     BitBlt(hdcTarget, 0, 0, rc.right - rc.left, rc.bottom - rc.top, hdcMem, 0, 0, SRCCOPY);
+    changed = false;    // Saved the changes
+    strcpy(curFileName, fileName);  // Copy the file name
+}
+
+int Painter::askForSaveIfReq(HWND hwnd)
+{
+    int res = IDNO;
+    if(changed)
+        res = MessageBox(hwnd, _T("Do you want to save the changes first?"), _T("Save changes?"), MB_YESNOCANCEL);
+    return res;
+}
+
+bool Painter::hasFileName()
+{
+    return curFileName[0]!='\0';        // If it has been stored
+}
+
+void Painter::clearScreen()
+{
+    // Color the screen white and restore brush and pen
+    HBRUSH oldBrush = (HBRUSH) SelectObject(hdcMem, GetStockObject(WHITE_BRUSH));
+    HPEN oldPen = (HPEN) SelectObject(hdcMem, GetStockObject(WHITE_PEN));
+    Rectangle(hdcMem, 0, 0, rc.right, rc.bottom);
+    SelectObject(hdcMem, oldBrush);
+    SelectObject(hdcMem, oldPen);
+}
+
+void Painter::getCurFileName(CHAR* fileName)
+{
+    // Copy the file name
+    strcpy(fileName, curFileName);
 }
 
 void PencilTool::startPaint(int x, int y, HDC hdc, RECT rc)
 {
+    lastx = x;
+    lasty = y;
     SetPixel(hdc, x, y, GetDCPenColor(hdc));     // Set the pixel with pen color
 }
 
 void PencilTool::continuePaint(int x, int y, HDC hdc, RECT rc)
 {
-    SetPixel(hdc, x, y, GetDCPenColor(hdc));     // Set the pixel with pen color
+    POINT p;
+    MoveToEx(hdc, lastx, lasty, &p);
+    LineTo(hdc, x, y);
+    lastx = x;
+    lasty = y;
+    //SetPixel(hdc, x, y, GetDCPenColor(hdc));     // Set the pixel with pen color
 }
 
 void PencilTool::endPaint()
