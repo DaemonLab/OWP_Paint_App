@@ -5,6 +5,10 @@ This is a windows only project. Cross platform gui projects will be covered in l
   
 Learning the WIN32 API at first can be quite daunting and hence it is being covered first to show that it is really easy once you get hang of the terminologies. Moreover, once you get through this seemingly daunting API, learning other APIs (either on your own or via the OWPs) will become a piece of cake. Hope you enjoy this tutorial.  
   
+## Navigating this tutorial
+We understand that many readers might not have familiarity with the `git` framework and hence we have added a guide to explain all the required commands to properly navigate this tutorial. Please have a look at it if you are not familiar with git. The guide is a pdf file named [Navigating_OWP_Paint_App.pdf](Navigating_OWP_Paint_App.pdf) present with this tutorial.  
+  
+  
 ## Running the code
 - Download latest windows binary of Code::Blocks IDE from http://www.codeblocks.org/downloads and select the file that ends with "mingw-setup.exe" as it will contain the MinGW toolchains for windows which will be used for compiling and linking.  
 - Clone this repo. And open the ".cbp" file which should open in the IDE.  
